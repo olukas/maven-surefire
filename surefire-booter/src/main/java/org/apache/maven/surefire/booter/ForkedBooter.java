@@ -33,6 +33,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadInfo;
+import java.lang.management.ThreadMXBean;
 import java.lang.reflect.InvocationTargetException;
 import java.security.AccessControlException;
 import java.security.AccessController;
@@ -329,7 +331,8 @@ public final class ForkedBooter
                                               }
                                           }
         );
-        encodeAndWriteToOutput( ( (char) BOOTERCODE_BYE ) + ",0,BYE!\n" );
+        encodeAndWriteToOutput(((char) BOOTERCODE_BYE) + ",0,BYE!\n");
+        System.out.println("THREAD DUMP after test finished: " + threadDump(true, true));
         launchLastDitchDaemonShutdownThread( 0 );
         long timeoutMillis = max( systemExitTimeoutInSeconds * ONE_SECOND_IN_MILLIS, ONE_SECOND_IN_MILLIS );
         acquireOnePermit( barrier, timeoutMillis );
@@ -371,10 +374,20 @@ public final class ForkedBooter
                                             @Override
                                             public void run()
                                             {
+                                                System.out.println("THREAD DUMP after timeout before kill: " + threadDump(true, true));
                                                 kill( returnCode );
                                             }
                                         }, systemExitTimeoutInSeconds, SECONDS
         );
+    }
+
+    public static String threadDump(boolean lockedMonitors, boolean lockedSynchronizers) {
+        StringBuilder threadDump = new StringBuilder("\n");
+        ThreadMXBean threadMXBean = ManagementFactory.getThreadMXBean();
+        for (ThreadInfo threadInfo : threadMXBean.dumpAllThreads(lockedMonitors, lockedSynchronizers)) {
+            threadDump.append(threadInfo.toString());
+        }
+        return threadDump.toString();
     }
 
     private RunResult invokeProviderInSameClassLoader( ForkingReporterFactory factory )
